@@ -1,16 +1,32 @@
 extends Node2D
 
+# grid size
 var cols = 7
 var rows = 7
+
+# first tile's position (bottom left tile)
 var x_start = 120
 var y_start = 1160
+
+# tile zone size
 var offset = 80
+
+# grid's top left corner position 
+var top = 640
+var left = 80
+
+# will contain all the tiles
 var grid = []
+
+# different types of tiles
 var possible_tiles = [
     preload("res://scenes/tiles/CircleTile.tscn"),
     preload("res://scenes/tiles/SquareTile.tscn"),
     preload("res://scenes/tiles/TriangleTile.tscn"),
 ]
+
+# input related vars
+var row_col_on_touch = null
 
 
 func _ready():
@@ -59,3 +75,29 @@ func get_tile_position(row, col):
     var x = x_start + offset * col
     var y = y_start + -offset * row
     return Vector2(x, y)
+
+
+func _input(event):
+    if event is InputEventScreenTouch:
+        # get row and col from pixel position
+        var row_col = get_row_col_from_position(event.position)
+        if row_col:
+            # on touch, keep row_col in memory
+            if event.pressed:
+                row_col_on_touch = row_col
+            # on release, check if row_col is still the same
+            if !event.pressed && row_col == row_col_on_touch:
+                print(row_col)
+
+
+func get_row_col_from_position(position):
+    var tile_top = position.y - top
+    var tile_left = position.x - left
+    var float_row = rows - (tile_top / offset)
+    var float_col = tile_left / offset
+    var row = int(float_row)
+    var col = int(float_col)
+    # row and col are within grid's range 
+    if float_row >= 0 && float_col >= 0 && row < rows && col < cols:
+        return [row, col]
+    return null
