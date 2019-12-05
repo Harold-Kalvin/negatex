@@ -87,7 +87,8 @@ func _input(event):
                 row_col_on_touch = row_col
             # on release, check if row_col is still the same
             if !event.pressed && row_col == row_col_on_touch:
-                print(row_col)
+                var tile = grid[row_col[0]][row_col[1]]
+                tile.select() if !tile.selected else tile.deselect()
 
 
 func get_row_col_from_position(position):
