@@ -11,9 +11,9 @@ func _ready():
 
 func select():
     selected = true
-    print("select %s" % self)
+    print("select %s -> %s" % [self, type])
     
     
 func deselect():
     selected = false
-    print("deselect %s" % self)
+    print("deselect %s -> %s" % [self, type])

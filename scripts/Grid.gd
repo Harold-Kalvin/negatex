@@ -11,10 +11,6 @@ var y_start = 1160
 # tile zone size
 var offset = 80
 
-# grid's top left corner position 
-var top = 640
-var left = 80
-
 # will contain all the tiles
 var grid = []
 
@@ -26,7 +22,7 @@ var possible_tiles = [
 ]
 
 # input related vars
-var row_col_on_touch = null
+var grid_position_on_touch = null
 
 
 func _ready():
@@ -45,8 +41,8 @@ func init_grid():
 
 
 func populate_grid():
-    for i in rows:
-        for j in cols:
+    for i in cols:
+        for j in rows:
             # generate random tile and make sure 3 tiles of the same type are not aligned
             var tile = get_random_tile()
             while chain_exists(i, j, tile.type):
@@ -54,7 +50,7 @@ func populate_grid():
             
             # add it to grid
             add_child(tile)
-            tile.position = get_tile_position(i, j)
+            tile.position = get_pixel_position(i, j)
             grid[i][j] = tile
 
 
@@ -63,42 +59,40 @@ func get_random_tile():
     return possible_tiles[rand].instance()
 
 
-func chain_exists(row, col, type):
-    if row > 1 && grid[row - 1][col].type == type && grid[row - 2][col].type == type:
+func chain_exists(col, row, type):
+    if col > 1 && grid[col - 1][row].type == type && grid[col - 2][row].type == type:
         return true
-    if col > 1 && grid[row][col - 1].type == type && grid[row][col - 2].type == type:
+    if row > 1 && grid[col][row - 1].type == type && grid[col][row - 2].type == type:
         return true
     return false
 
 
-func get_tile_position(row, col):
+func get_pixel_position(col, row):
     var x = x_start + offset * col
     var y = y_start + -offset * row
     return Vector2(x, y)
 
 
+func get_grid_position(x, y):
+    var col = round((x - x_start) / offset)
+    var row = round((y - y_start) / -offset)
+    return Vector2(col, row)
+
+
+func within_grid_range(col, row):
+    if col >= 0 && col < cols && row >= 0 && row < rows:
+        return true
+    return false
+
+
 func _input(event):
     if event is InputEventScreenTouch:
-        # get row and col from pixel position
-        var row_col = get_row_col_from_position(event.position)
-        if row_col:
-            # on touch, keep row_col in memory
+        var grid_position = get_grid_position(event.position.x, event.position.y)
+        if within_grid_range(grid_position.x, grid_position.y):
+            # on touch, keep grid_position in memory
             if event.pressed:
-                row_col_on_touch = row_col
-            # on release, check if row_col is still the same
-            if !event.pressed && row_col == row_col_on_touch:
-                var tile = grid[row_col[0]][row_col[1]]
+                grid_position_on_touch = grid_position
+            # on release, check if grid_position is still the same
+            if !event.pressed && grid_position == grid_position_on_touch:
+                var tile = grid[grid_position.x][grid_position.y]
                 tile.select() if !tile.selected else tile.deselect()
-
-
-func get_row_col_from_position(position):
-    var tile_top = position.y - top
-    var tile_left = position.x - left
-    var float_row = rows - (tile_top / offset)
-    var float_col = tile_left / offset
-    var row = int(float_row)
-    var col = int(float_col)
-    # row and col are within grid's range 
-    if float_row >= 0 && float_col >= 0 && row < rows && col < cols:
-        return [row, col]
-    return null
