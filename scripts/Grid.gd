@@ -1,5 +1,8 @@
 extends Node2D
 
+# custom classes
+var Combination = load("res://scripts/Combination.gd")
+
 # grid size
 var cols = 7
 var rows = 7
@@ -13,6 +16,9 @@ var offset = 80
 
 # will contain all the tiles
 var grid = []
+
+# unique hash as key / combination object as value
+var combinations = {}
 
 # different types of tiles
 var possible_tiles = [
@@ -28,7 +34,7 @@ var grid_position_on_touch = null
 func _ready():
     randomize()
     grid = init_grid()
-    populate_grid()
+    shuffle()
 
 
 func init_grid():
@@ -40,18 +46,51 @@ func init_grid():
     return array
 
 
+func clone_grid(to_clone):
+    var array = []
+    var i = 0
+    for items in to_clone:
+        array.append([])
+        for item in items:
+            array[i].append(item)
+        i+=1
+    return array
+
+
 func populate_grid():
+    var added_tiles = []
     for i in cols:
         for j in rows:
-            # generate random tile and make sure 3 tiles of the same type are not aligned
-            var tile = get_random_tile()
-            while chain_exists(i, j, tile.type):
-                tile = get_random_tile()
-            
-            # add it to grid
-            add_child(tile)
-            tile.position = get_pixel_position(i, j)
-            grid[i][j] = tile
+            # if grid cell is null
+            if !grid[i][j]:
+                # generate random tile and make sure 3 tiles of the same type are not aligned
+                var tile = get_random_tile()
+                while chain_exists(i, j, tile.type):
+                    tile = get_random_tile()
+                # add it to grid
+                add_child(tile)
+                tile.init(i, j)
+                tile.position = get_pixel_position(i, j)
+                grid[i][j] = tile
+                # added tiles will be returned
+                added_tiles.append(tile)
+    return added_tiles
+
+
+func shuffle():
+    var current_grid = clone_grid(grid)
+    var added_tiles = []
+    # make sure there are at least 5 combinations in the grid
+    while combinations.size() < 5:
+        # free tiles added in the previous iteration and restore current grid state
+        if !added_tiles.empty():
+            for added in added_tiles:
+                added.queue_free()
+            grid = clone_grid(current_grid)
+
+        # populate grid and check for combinations
+        added_tiles = populate_grid()
+        identify_combinations()
 
 
 func get_random_tile():
@@ -96,3 +135,52 @@ func _input(event):
             if !event.pressed && grid_position == grid_position_on_touch:
                 var tile = grid[grid_position.x][grid_position.y]
                 tile.select() if !tile.selected else tile.deselect()
+
+
+func identify_combinations():
+    combinations = {}
+    # for each tiles
+    for cols in grid:
+        for tile in cols:
+            # check identical tiles at the top side
+            var same_top = same_type_top(tile)
+            for tile_top in same_top:
+                # check identical tiles at the right side
+                var same_right = same_type_right(tile_top)
+                for tile_right in same_right:
+                    # check identical tiles at the bottom side
+                    var same_bottom = same_type_bottom(tile_right)
+                    for tile_bottom in same_bottom:
+                        if tile_bottom.row == tile.row:
+                            # create a combination with the 4 identical tiles
+                            var combination = Combination.new()
+                            combination.init(tile, tile_top, tile_right, tile_bottom)
+                            if !combinations.has(combination.custom_hash):
+                                combinations[combination.custom_hash] = combination
+
+
+func same_type_top(tile):
+    var tiles = []
+    if tile && tile.row < rows -1:
+        for i in range(tile.row + 1, rows):
+            if grid[tile.col][i] && grid[tile.col][i].type == tile.type:
+                tiles.append(grid[tile.col][i])
+    return tiles
+
+
+func same_type_bottom(tile):
+    var tiles = []
+    if tile && tile.row > 0:
+        for i in range(tile.row - 1, -1, -1):
+            if grid[tile.col][i] && grid[tile.col][i].type == tile.type:
+                tiles.append(grid[tile.col][i])
+    return tiles
+
+
+func same_type_right(tile):
+    var tiles = []
+    if tile && tile.col < cols - 1:
+        for i in range(tile.col + 1, cols):
+            if grid[i][tile.row] && grid[i][tile.row].type == tile.type:
+                tiles.append(grid[i][tile.row])
+    return tiles
