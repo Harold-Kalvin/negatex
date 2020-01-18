@@ -20,6 +20,9 @@ var grid = []
 # unique hash as key / combination object as value
 var combinations = {}
 
+# list of selected tiles (that are part of a combination)
+var selected_tiles = []
+
 # different types of tiles
 var possible_tiles = [
     preload("res://scenes/tiles/CircleTile.tscn"),
@@ -133,8 +136,34 @@ func _input(event):
                 grid_position_on_touch = grid_position
             # on release, check if grid_position is still the same
             if !event.pressed && grid_position == grid_position_on_touch:
+                # select the tile
                 var tile = grid[grid_position.x][grid_position.y]
-                tile.select() if !tile.selected else tile.deselect()
+                select_tile(tile)
+
+
+func select_tile(tile):
+    # if already selected
+    if tile.selected && selected_tiles.has(tile):
+        tile.deselect()
+        selected_tiles.erase(tile)
+    # if not selected
+    else:
+        var selected_tiles_clone = [] + selected_tiles
+        tile.select()
+        selected_tiles.append(tile)
+        
+        # check if a combination is still possible
+        var combination_possible = false
+        for combination in combinations.values():
+            if combination.contains_all(selected_tiles):
+                combination_possible = true
+                break
+        
+        # if combination not possible, deselect all previous tiles
+        if !combination_possible:
+            for selected in selected_tiles_clone:
+                selected.deselect()
+                selected_tiles.erase(selected)
 
 
 func identify_combinations():

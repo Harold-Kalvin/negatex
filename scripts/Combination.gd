@@ -20,3 +20,11 @@ func to_string():
         tile3.col, tile3.row,
         tile4.col, tile4.row
     ]
+
+
+func contains_all(tiles):
+    var hashes = [hash(tile1), hash(tile2), hash(tile3), hash(tile4)]
+    for tile in tiles:
+        if !hashes.has(hash(tile)):
+            return false
+    return true
