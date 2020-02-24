@@ -14,6 +14,13 @@ var y_start = 1160
 # tile zone size
 var offset = 80
 
+# different types of tiles
+var possible_tiles = [
+    preload("res://scenes/tiles/CircleTile.tscn"),
+    preload("res://scenes/tiles/SquareTile.tscn"),
+    preload("res://scenes/tiles/TriangleTile.tscn"),
+]
+
 # will contain all the tiles
 var grid = []
 
