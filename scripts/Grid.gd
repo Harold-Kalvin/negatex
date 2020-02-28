@@ -17,6 +17,7 @@ var offset = 80
 # different types of tiles
 var possible_tiles = [
     preload("res://scenes/tiles/CircleTile.tscn"),
+    preload("res://scenes/tiles/DiamondTile.tscn"),
     preload("res://scenes/tiles/SquareTile.tscn"),
     preload("res://scenes/tiles/TriangleTile.tscn"),
 ]
