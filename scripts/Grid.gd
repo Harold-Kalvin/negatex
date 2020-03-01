@@ -2,6 +2,7 @@ extends Node2D
 
 # custom classes
 var Combination = load("res://scripts/Combination.gd")
+var Chain = load("res://scripts/Chain.gd")
 
 # grid size
 var cols = 7
@@ -30,6 +31,9 @@ var grid_above = []
 
 # unique hash as key / combination object as value
 var combinations = {}
+
+# unique hash as key / chain object as value
+var chains = {}
 
 # list of selected tiles (that are part of a combination)
 var selected_tiles = []
@@ -96,7 +100,7 @@ func populate_grid():
 func shuffle():
     var current_grid = clone_grid(grid)
     var added_tiles = []
-    combinations = {}
+    combinations.clear()
     # make sure there are at least 5 combinations in the grid
     while combinations.size() < 5:
         # free tiles added in the previous iteration and restore current grid state
@@ -108,6 +112,9 @@ func shuffle():
         # populate grid and check for combinations
         added_tiles = populate_grid()
         identify_combinations()
+    
+    # check for chains
+    identify_chains()
 
 
 func display_tiles():
@@ -208,7 +215,7 @@ func remove_combination_tiles():
 
 
 func move_existing_tiles():
-    grid_above = []
+    grid_above.clear()
     var i = 0
     for col in grid:
         var j = 0
@@ -281,7 +288,7 @@ func start_animations():
 
 
 func identify_combinations():
-    combinations = {}
+    combinations.clear()
     # for each tiles
     for cols in grid:
         for tile in cols:
@@ -327,6 +334,92 @@ func same_type_right(tile):
             if grid[i][tile.row] && grid[i][tile.row].type == tile.type:
                 tiles.append(grid[i][tile.row])
     return tiles
+
+
+func identify_chains():
+    chains.clear()
+    for col in grid:
+        for tile in col:
+            var chain = identify_chain(tile)
+            if chain && !chains.has(chain.get_custom_hash()):
+                chains[chain.get_custom_hash()] = chain
+
+
+func identify_chain(tile, chain := Chain.new(), check_chain_type := null, chains_hashes := []):
+    # check horizonal chain
+    if !check_chain_type || check_chain_type == Chain.CHAIN_TYPE.HORIZONTAL:
+        var found_chain = identify_horizontal_chain(tile)
+        if found_chain && !found_chain.get_custom_hash() in chains_hashes:
+            chain.type = Chain.CHAIN_TYPE.HORIZONTAL
+            chains_hashes.append(found_chain.get_custom_hash())
+            # for each tiles in the found chain, check if other chains are possible
+            for found_chain_tile in found_chain.tiles:
+                if !found_chain_tile in chain.tiles:
+                    chain.tiles.append(found_chain_tile)
+                # only check for vertical chains (because no other horizontal chains exists appart from the found chain)
+                if tile != found_chain_tile:
+                    chain = identify_chain(found_chain_tile, chain, Chain.CHAIN_TYPE.VERTICAL, chains_hashes)
+    
+    # check vertical chain
+    if !check_chain_type || check_chain_type == Chain.CHAIN_TYPE.VERTICAL:
+        var found_chain = identify_vertical_chain(tile)
+        if found_chain && !found_chain.get_custom_hash() in chains_hashes:
+            chain.type = Chain.CHAIN_TYPE.VERTICAL
+            chains_hashes.append(found_chain.get_custom_hash())
+            # for each tiles in the found chain, check if other chains are possible
+            for found_chain_tile in found_chain.tiles:
+                if !found_chain_tile in chain.tiles:
+                    chain.tiles.append(found_chain_tile)
+                # only check for horizontal chains (because no other vertical chains exists appart from the found chain)
+                if tile != found_chain_tile:
+                    chain = identify_chain(found_chain_tile, chain, Chain.CHAIN_TYPE.HORIZONTAL, chains_hashes)
+    
+    # setting chain type and return chain if any
+    if !chains_hashes.empty():
+        if len(chains_hashes) > 1:
+            chain.type = Chain.CHAIN_TYPE.COMBINED
+        return chain
+    return null
+
+
+func identify_horizontal_chain(tile):
+    var chain = Chain.new()
+    chain.type = Chain.CHAIN_TYPE.HORIZONTAL
+    chain.tiles.append(tile)
+
+    # search left
+    var i = tile.col - 1
+    while i >= 0 && grid[i][tile.row] && grid[i][tile.row].type == tile.type:
+        chain.tiles.append(grid[i][tile.row])
+        i = i - 1
+
+    # search right
+    i = tile.col + 1
+    while i < cols && grid[i][tile.row] && grid[i][tile.row].type == tile.type:
+        chain.tiles.append(grid[i][tile.row])
+        i = i + 1
+    
+    return chain if len(chain.tiles) >= 3 else null
+
+
+func identify_vertical_chain(tile):
+    var chain = Chain.new()
+    chain.type = Chain.CHAIN_TYPE.VERTICAL
+    chain.tiles.append(tile)
+
+    # search down
+    var i = tile.row - 1
+    while i >= 0 && grid[tile.col][i] && grid[tile.col][i].type == tile.type:
+        chain.tiles.append(grid[tile.col][i])
+        i = i - 1
+
+    # search up
+    i = tile.row + 1
+    while i < rows && grid[tile.col][i] && grid[tile.col][i].type == tile.type:
+        chain.tiles.append(grid[tile.col][i])
+        i = i + 1
+    
+    return chain if len(chain.tiles) >= 3 else null
 
 
 func dump_grid():
