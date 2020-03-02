@@ -1,8 +1,8 @@
 extends Node2D
 
 # custom classes
-var Combination = load("res://scripts/Combination.gd")
-var Chain = load("res://scripts/Chain.gd")
+var Combination = load("res://scripts/models/Combination.gd")
+var Chain = load("res://scripts/models/Chain.gd")
 
 # grid size
 var cols = 7
